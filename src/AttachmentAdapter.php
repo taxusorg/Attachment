@@ -21,9 +21,6 @@ class AttachmentAdapter implements FilesystemContract
         $this->model = $model;
     }
     
-    /**
-     * Select by path
-     */
     protected function explainPath($path)
     {
         $pathinfo = pathinfo($path);
@@ -31,21 +28,37 @@ class AttachmentAdapter implements FilesystemContract
         return $pathinfo;
     }
     
+    /**
+     * 
+     * @param string $path
+     * @return string|boolean
+     */
     public function getFilepath($path)
     {
-        $pathinfo = $this->explainPath($path);
-        
-        $result = $this->model->where([
-        'name' => $pathinfo['basename'],
-        'dir' => $pathinfo['dirname'],
-        ])->get();
+        $result = $this->getModelByPath($path);
         
         if($result) {
             return $result['dir'].DIRECTORY_SEPARATOR.$result['filename'];
         }
         
         return false;
+    }
+    
+    /**
+     * 
+     * @param string $path
+     * @return model|false
+     */
+    public function getModelByPath($path)
+    {
+        $pathinfo = $this->explainPath($path);
         
+        $result = $this->model->where([
+            'name' => $pathinfo['basename'],
+            'dir' => $pathinfo['dirname'],
+        ])->first();
+        
+        return $result ?: false;
     }
     
     /**
@@ -91,14 +104,16 @@ class AttachmentAdapter implements FilesystemContract
         }
         
         $filename = $md5.'.'.$pathinfo['extension'];
+        $filepath = $pathinfo['dirname'].DIRECTORY_SEPARATOR.$filename;
+        while ($this->disk->exists($filepath)) {
+            $filename = $md5.'-'.rand(0,1000).'.'.$pathinfo['extension'];
+            $filepath = $pathinfo['dirname'].DIRECTORY_SEPARATOR.$filename;
+        }
         
-        $repath = $pathinfo['dirname'].DIRECTORY_SEPARATOR.$filename;
-        
-        $result = $this->disk->put($repath, $contents, $visibility);
+        $result = $this->disk->put($filepath, $contents, $visibility);
         if(!$result) return false;
         
-        $size = $this->disk->size($repath);
-        
+        $size = $this->disk->size($filepath);
         $this->model->create([
             'name' => $pathinfo['basename'],
             'dir' => $pathinfo['dirname'],
@@ -114,7 +129,7 @@ class AttachmentAdapter implements FilesystemContract
     /**
      * Get the visibility for the given path.
      *
-     * @param string $path            
+     * @param string $path
      * @return string
      */
     public function getVisibility($path)
@@ -125,19 +140,19 @@ class AttachmentAdapter implements FilesystemContract
     /**
      * Set the visibility for the given path.
      *
-     * @param string $path            
+     * @param string $path
      * @param string $visibility            
      * @return void
      */
     public function setVisibility($path, $visibility)
     {
-        return $this->setVisibility($this->getFilepath($path), $visibility);
+        return $this->disk->setVisibility($this->getFilepath($path), $visibility);
     }
 
     /**
      * Prepend to a file.
      *
-     * @param string $path            
+     * @param string $path
      * @param string $data            
      * @return int
      */
@@ -149,8 +164,8 @@ class AttachmentAdapter implements FilesystemContract
     /**
      * Append to a file.
      *
-     * @param string $path            
-     * @param string $data            
+     * @param string $path
+     * @param string $data
      * @return int
      */
     public function append($path, $data)
@@ -161,12 +176,13 @@ class AttachmentAdapter implements FilesystemContract
     /**
      * Delete the file at a given path.
      *
-     * @param string|array $paths            
+     * @param string|array $paths
      * @return bool
      */
-    public function delete($paths)
+    public function delete($path)
     {
-        $this->disk->delete($this->getFilepath($path));
+        $this->getModelByPath($path)->delete();
+        return $this->disk->delete($this->getFilepath($path));
     }
 
     /**
@@ -178,7 +194,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function copy($from, $to)
     {
-        $this->disk->copy($from, $to);
+        return $this->disk->copy($from, $to);
     }
 
     /**
@@ -190,7 +206,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function move($from, $to)
     {
-        $this->disk->move($from, $to);
+        return $this->disk->move($from, $to);
     }
 
     /**
@@ -201,7 +217,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function size($path)
     {
-        $this->disk->size($this->getFilepath($path));
+        return $this->disk->size($this->getFilepath($path));
     }
 
     /**
@@ -212,7 +228,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function lastModified($path)
     {
-        $this->lastModified($this->getFilepath($path));
+        return $this->lastModified($this->getFilepath($path));
     }
 
     /**
@@ -224,7 +240,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function files($directory = null, $recursive = false)
     {
-        $this->disk->files($directory, $recursive);
+        return $this->disk->files($directory, $recursive);
     }
 
     /**
@@ -247,7 +263,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function directories($directory = null, $recursive = false)
     {
-        $this->disk->directories($directory, $recursive);
+        return $this->disk->directories($directory, $recursive);
     }
 
     /**
@@ -258,7 +274,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function allDirectories($directory = null)
     {
-        $this->disk->allDirectories($directory);
+        return $this->disk->allDirectories($directory);
     }
 
     /**
@@ -269,7 +285,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function makeDirectory($path)
     {
-        $this->disk->makeDirectory($path);
+        return $this->disk->makeDirectory($path);
     }
 
     /**
@@ -280,7 +296,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function deleteDirectory($directory)
     {
-        $this->disk->deleteDirectory($directory);
+        return $this->disk->deleteDirectory($directory);
     }
     
     public function applyPathPrefix($path)

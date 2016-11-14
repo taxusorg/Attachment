@@ -29,7 +29,8 @@ class OneTest extends PHPUnit_Framework_TestCase
         $filesystem = new Flysystem($local);
         $drive = new FilesystemAdapter($filesystem);
         
-        $model = m::mock(Illuminate\Database\Eloquent\Model::class);
+        $model = Taxusorg\Attachment\Model::getConnectionResolver();
+        print_r($model);
         $model->shouldReceive('create')->andReturn(true);
         $model->shouldReceive('where')->andReturnSelf();
         $model->shouldReceive('get')->andReturn([

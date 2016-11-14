@@ -11,8 +11,7 @@
         }
     ],
     "require": {
-        "php": ">=5.5.9",
-        "laravel/framework": "5.*"
+        "php": ">=5.5.9"
     },
     "require-dev": {
         "mockery/mockery": "0.9.*"
@@ -23,12 +22,6 @@
         }
     },
     "autoload-dev": {
-        "classmap": [
-            "tests/TestCase.php"
-        ],
-        "psr-4": {
-            "App\\": "app/"
-        }
     }
     
 }

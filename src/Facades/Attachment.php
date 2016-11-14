@@ -1,5 +1,5 @@
 <?php
-namespace Taxus\Attachment\Facades;
+namespace Taxusorg\Attachment\Facades;
 
 use Illuminate\Support\Facades\Facade;
 class Attachment extends Facade

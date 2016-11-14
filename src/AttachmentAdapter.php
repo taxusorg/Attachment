@@ -1,8 +1,8 @@
 <?php
-namespace Taxus\Attachment;
+namespace Taxusorg\Attachment;
 
 use Illuminate\Contracts\Filesystem\Filesystem as FilesystemContract;
-use Taxus\Attachment\Model;
+use Taxusorg\Attachment\Model;
 
 class AttachmentAdapter implements FilesystemContract
 {

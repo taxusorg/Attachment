@@ -19,7 +19,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Taxus\\Attachment\\": "src/"
+            "Taxusorg\\Attachment\\": "src/"
         }
     },
     "autoload-dev": {

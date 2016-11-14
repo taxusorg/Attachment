@@ -1,7 +1,7 @@
 <?php
 
 use \Mockery as m;
-use Taxus\Attachment\AttachmentAdapter;
+use Taxusorg\Attachment\AttachmentAdapter;
 use League\Flysystem\Adapter\Local as LocalAdapter;
 use League\Flysystem\Filesystem as Flysystem;
 use Illuminate\Filesystem\Filesystem;

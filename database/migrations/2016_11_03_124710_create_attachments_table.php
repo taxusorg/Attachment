@@ -17,7 +17,7 @@ class CreateAttachmentsTable extends Migration
             $table->increments('id');
             $table->string('name');
             $table->string('type');
-            $table->string('format');
+            $table->string('extension');
             $table->integer('size');
             $table->string('md5');
             $table->string('dir');

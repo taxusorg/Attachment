@@ -2,7 +2,7 @@
 namespace Taxus\Attachment;
 
 use Illuminate\Contracts\Filesystem\Filesystem as FilesystemContract;
-use Illuminate\Database\Eloquent\Model;
+use Taxus\Attachment\Model;
 
 class AttachmentAdapter implements FilesystemContract
 {
@@ -90,14 +90,14 @@ class AttachmentAdapter implements FilesystemContract
             $md5 = md5($contents);
         }
         
-        $filename = $md5;
+        $filename = $md5.'.'.$pathinfo['extension'];
         
         $repath = $pathinfo['dirname'].DIRECTORY_SEPARATOR.$filename;
         
         $result = $this->disk->put($repath, $contents, $visibility);
         if(!$result) return false;
         
-        $size = $this->size($repath);
+        $size = $this->disk->size($repath);
         
         $this->model->create([
             'name' => $pathinfo['basename'],
@@ -107,6 +107,8 @@ class AttachmentAdapter implements FilesystemContract
             'filename' => $filename,
             'size' => $size,
         ]);
+        
+        return true;
     }
     
     /**
@@ -117,7 +119,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function getVisibility($path)
     {
-        $this->disk->getVisibility($this->getFilepath($path));
+        return $this->disk->getVisibility($this->getFilepath($path));
     }
 
     /**
@@ -129,7 +131,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function setVisibility($path, $visibility)
     {
-        $this->setVisibility($this->getFilepath($path), $visibility);
+        return $this->setVisibility($this->getFilepath($path), $visibility);
     }
 
     /**
@@ -141,7 +143,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function prepend($path, $data)
     {
-        $this->disk->prepend($this->getFilepath($path), $data);
+        return $this->disk->prepend($this->getFilepath($path), $data);
     }
 
     /**
@@ -153,7 +155,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function append($path, $data)
     {
-        $this->disk->append($this->getFilepath($path), $data);
+        return $this->disk->append($this->getFilepath($path), $data);
     }
 
     /**

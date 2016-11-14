@@ -1,5 +1,5 @@
 <?php
-namespace Taxus\Attachment;
+namespace Taxusorg\Attachment;
 
 use Illuminate\Contracts\Filesystem\Filesystem as FilesystemContract;
 use Illuminate\Database\Eloquent\Model;

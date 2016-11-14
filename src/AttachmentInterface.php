@@ -1,5 +1,5 @@
 <?php
-namespace Taxus\Attachment;
+namespace Taxusorg\Attachment;
 
 interface AttachmentInterface
 {

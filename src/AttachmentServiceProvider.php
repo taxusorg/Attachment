@@ -1,5 +1,5 @@
 <?php
-namespace Taxus\Attachment;
+namespace Taxusorg\Attachment;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Foundation\Application;

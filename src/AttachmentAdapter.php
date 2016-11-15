@@ -3,6 +3,7 @@ namespace Taxusorg\Attachment;
 
 use Illuminate\Contracts\Filesystem\Filesystem as FilesystemContract;
 use Illuminate\Database\Eloquent\Model;
+use League\Flysystem\Util;
 
 class AttachmentAdapter implements FilesystemContract
 {
@@ -21,9 +22,9 @@ class AttachmentAdapter implements FilesystemContract
         $this->model = $model;
     }
     
-    protected function explainPath($path)
+    public function explainPath($path)
     {
-        $pathinfo = pathinfo($path);
+        $pathinfo = Util::pathinfo($path);
         $pathinfo['dirname'] = substr($pathinfo['dirname'], 0, 1) == '/' ? substr($pathinfo['dirname'], 1) : $pathinfo['dirname'];
         return $pathinfo;
     }
@@ -35,7 +36,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function getFilepath($path)
     {
-        $result = $this->getModelByPath($path);
+        $result = $this->getBuilderByPaths($path)->first();
         
         return $result ? $result['dir'].DIRECTORY_SEPARATOR.$result['filename'] : false;
     }
@@ -47,7 +48,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function getFilepaths($paths)
     {
-        $results = $this->getModelByPaths($paths);
+        $results = $this->getBuilderByPaths($paths)->get();
         if(!$results) return false;
         
         $array = array();
@@ -58,6 +59,17 @@ class AttachmentAdapter implements FilesystemContract
         return $array;
     }
     
+    public function getFilepathsByDirs($dirs)
+    {
+        $results = $this->getBuilderByDirs($dirs)->get();
+        if(!$results) return false;
+        
+        $array = array();
+        foreach($results as $result) {
+            $array[] = $result['dir'].DIRECTORY_SEPARATOR.$result['filename'];
+        }
+    }
+    
     /**
      * 
      * @param string $filepath
@@ -65,9 +77,9 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function getPath($filepath)
     {
-        $result = $this->getModelByFilepath($filepath);
+        $result = $this->getBuilderByFilepaths($filepath)->first();
         
-        return $result ? $result['dir'].DIRECTORY_SEPARATOR.$result['name'] : false;
+        return $result ? $result['dir'].'/'.$result['name'] : false;
     }
     
     /**
@@ -77,12 +89,25 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function getPaths($filepaths)
     {
-        $results = $this->getModelByFilepaths($filepaths);
+        $results = $this->getBuilderByFilepaths($filepaths)->get();
         if(!$results) return false;
         
         $array = array();
         foreach ($results as $result){
-            $array[] = $result['dir'].DIRECTORY_SEPARATOR.$result['name'];
+            $array[] = $result == '' ? $result['dir'].'/'.$result['name'] : $result['name'];
+        }
+        
+        return $array;
+    }
+    
+    public function getPathsByDirs($dirs)
+    {
+        $results = $this->getBuilderByDirs($dirs)->get();
+        if(!$results) return false;
+        
+        $array = array();
+        foreach ($results as $result) {
+            $array[] = $result['dir'].'/'.$result['name'];
         }
         
         return $array;
@@ -90,74 +115,84 @@ class AttachmentAdapter implements FilesystemContract
     
     /**
      * 
-     * @param string $path
-     * @return model|false
+     * @param string|array $paths
+     * @return boolean
      */
-    public function getModelByPath($path)
+    public function deletePaths($paths)
     {
-        $pathinfo = $this->explainPath($path);
+        return $results = $this->getBuilderByPaths($paths)->delete();
+    }
+    
+    public function deletePathsByDirs($dirs)
+    {
+        return $results = $this->getBuilderByDirs($dirs)->delete();
+    }
+    
+    public function getDirs($dirs)
+    {
+        $results = $this->getBuilderByDirs($dirs)->groupBy('dir')->get(['dir']);
+        if(!$results) return false;
         
-        $result = $this->model->where([
-            'name' => $pathinfo['basename'],
-            'dir' => $pathinfo['dirname'],
-        ])->first();
+        $array = array();
+        foreach ($results as $result) {
+            $array[] = $result['dir'];
+        }
         
-        return $result ?: false;
+        return $array;
     }
     
     /**
      * 
      * @param array|string $paths
      */
-    public function getModelByPaths($paths)
+    public function getBuilderByPaths($paths)
     {
         is_array($paths) || $paths = [$paths];
         
+        $query = $this->model->newQuery();
         foreach ($paths as $path) {
             $pathinfo = $this->explainPath($path);
-            $this->model->orWhere([
+            $query->orWhere([
                 'name' => $pathinfo['basename'],
                 'dir' => $pathinfo['dirname'],
             ]);
         }
         
-        return $this->model->get();
-    }
-    
-    /**
-     * 
-     * @param string $filepath
-     * @return string|boolean
-     */
-    public function getModelByFilepath($filepath)
-    {
-        $filepathinfo = $this->explainPath($filepath);
-        
-        $result = $this->model->where([
-            'filename' => $filepathinfo['basename'],
-            'dir' => $filepathinfo['dirname'],
-        ])->first();
-        
-        return $result ?: false;
+        return $query;
     }
     
     /**
      * 
      * @param unknown $filepaths
      */
-    public function getModelByFilepaths($filepaths)
+    public function getBuilderByFilepaths($filepaths)
     {
         is_array($filepaths) || $filepaths = [$filepaths];
-    
+        
+        $query = $this->model->newQuery();
         foreach ($filepaths as $filepath) {
             $pathinfo = $this->explainPath($filepath);
-            $this->model->orWhere([
+            $query->orWhere([
                 'filename' => $pathinfo['basename'],
                 'dir' => $pathinfo['dirname'],
             ]);
         }
     
-        return $this->model->get();
+        return $query;
+    }
+    
+    public function getBuilderByDirs($dirs)
+    {
+        is_array($dirs) || $dirs = [$dirs];
+        
+        $query = $this->model->newQuery();
+        foreach ($dirs as $dir) {
+            $query->orWhere([
+                'dir' => $dir,
+            ]);
+        }
+        
+        return $query;
     }
     
     /**
@@ -205,7 +240,9 @@ class AttachmentAdapter implements FilesystemContract
         $filename = $md5.'.'.$pathinfo['extension'];
         $filepath = $pathinfo['dirname'].DIRECTORY_SEPARATOR.$filename;
         while ($this->disk->exists($filepath)) {
-            $filename = $md5.'-'.rand(0,1000).'.'.$pathinfo['extension'];
+            $rand = rand(0,1000);
+            $pathinfo['basename'] = $pathinfo['filename'].'-'.$rand.'.'.$pathinfo['extension'];
+            $filename = $md5.'-'.$rand.'.'.$pathinfo['extension'];
             $filepath = $pathinfo['dirname'].DIRECTORY_SEPARATOR.$filename;
         }
         
@@ -280,8 +317,8 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function delete($path)
     {
-        $this->getModelByPath($path)->delete();
-        return $this->disk->delete($this->getFilepath($path));
+        $this->disk->delete($this->getFilepaths($path));
+        return $this->deletePaths($path);
     }
 
     /**
@@ -339,7 +376,8 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function files($directory = null, $recursive = false)
     {
-        return $this->disk->files($directory, $recursive);
+        $filepaths = $this->disk->files($directory, $recursive);
+        return $this->getPaths($filepaths);
     }
 
     /**
@@ -350,7 +388,9 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function allFiles($directory = null)
     {
-        return $this->disk->allFiles($directory);
+        $filepaths = $this->disk->allFiles($directory);
+        return $this->getPaths($filepaths);
+        
     }
 
     /**
@@ -362,7 +402,8 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function directories($directory = null, $recursive = false)
     {
-        return $this->disk->directories($directory, $recursive);
+        $dirs = $this->disk->directories($directory, $recursive);
+        return $this->getDirs($dirs);
     }
 
     /**
@@ -373,7 +414,8 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function allDirectories($directory = null)
     {
-        return $this->disk->allDirectories($directory);
+        $dirs = $this->disk->allDirectories($directory);
+        return $this->getDirs($dirs);
     }
 
     /**
@@ -395,7 +437,8 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function deleteDirectory($directory)
     {
-        return $this->disk->deleteDirectory($directory);
+        $this->disk->deleteDirectory($directory);
+        return $this->deletePathsByDirs($directory);
     }
     
     public function applyPathPrefix($path)

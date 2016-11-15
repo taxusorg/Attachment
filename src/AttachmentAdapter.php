@@ -2,7 +2,7 @@
 namespace Taxusorg\Attachment;
 
 use Illuminate\Contracts\Filesystem\Filesystem as FilesystemContract;
-use Taxusorg\Attachment\Model;
+use Illuminate\Database\Eloquent\Model;
 
 class AttachmentAdapter implements FilesystemContract
 {
@@ -37,11 +37,55 @@ class AttachmentAdapter implements FilesystemContract
     {
         $result = $this->getModelByPath($path);
         
-        if($result) {
-            return $result['dir'].DIRECTORY_SEPARATOR.$result['filename'];
+        return $result ? $result['dir'].DIRECTORY_SEPARATOR.$result['filename'] : false;
+    }
+    
+    /**
+     * 
+     * @param string|array $paths
+     * @return array|boolean
+     */
+    public function getFilepaths($paths)
+    {
+        $results = $this->getModelByPaths($paths);
+        if(!$results) return false;
+        
+        $array = array();
+        foreach($results as $result) {
+            $array[] = $result['dir'].DIRECTORY_SEPARATOR.$result['filename'];
         }
         
-        return false;
+        return $array;
+    }
+    
+    /**
+     * 
+     * @param string $filepath
+     * @return string|boolean
+     */
+    public function getPath($filepath)
+    {
+        $result = $this->getModelByFilepath($filepath);
+        
+        return $result ? $result['dir'].DIRECTORY_SEPARATOR.$result['name'] : false;
+    }
+    
+    /**
+     * 
+     * @param array|string $filepaths
+     * @return string|boolean
+     */
+    public function getPaths($filepaths)
+    {
+        $results = $this->getModelByFilepaths($filepaths);
+        if(!$results) return false;
+        
+        $array = array();
+        foreach ($results as $result){
+            $array[] = $result['dir'].DIRECTORY_SEPARATOR.$result['name'];
+        }
+        
+        return $array;
     }
     
     /**
@@ -59,6 +103,61 @@ class AttachmentAdapter implements FilesystemContract
         ])->first();
         
         return $result ?: false;
+    }
+    
+    /**
+     * 
+     * @param array|string $paths
+     */
+    public function getModelByPaths($paths)
+    {
+        is_array($paths) || $paths = [$paths];
+        
+        foreach ($paths as $path) {
+            $pathinfo = $this->explainPath($path);
+            $this->model->orWhere([
+                'name' => $pathinfo['basename'],
+                'dir' => $pathinfo['dirname'],
+            ]);
+        }
+        
+        return $this->model->get();
+    }
+    
+    /**
+     * 
+     * @param string $filepath
+     * @return string|boolean
+     */
+    public function getModelByFilepath($filepath)
+    {
+        $filepathinfo = $this->explainPath($filepath);
+        
+        $result = $this->model->where([
+            'filename' => $filepathinfo['basename'],
+            'dir' => $filepathinfo['dirname'],
+        ])->first();
+        
+        return $result ?: false;
+    }
+    
+    /**
+     * 
+     * @param unknown $filepaths
+     */
+    public function getModelByFilepaths($filepaths)
+    {
+        is_array($filepaths) || $filepaths = [$filepaths];
+    
+        foreach ($filepaths as $filepath) {
+            $pathinfo = $this->explainPath($filepath);
+            $this->model->orWhere([
+                'filename' => $pathinfo['basename'],
+                'dir' => $pathinfo['dirname'],
+            ]);
+        }
+    
+        return $this->model->get();
     }
     
     /**
@@ -228,7 +327,7 @@ class AttachmentAdapter implements FilesystemContract
      */
     public function lastModified($path)
     {
-        return $this->lastModified($this->getFilepath($path));
+        return $this->disk->lastModified($this->getFilepath($path));
     }
 
     /**

@@ -108,7 +108,7 @@ class AttachmentManager
      */
     protected function getConfig($name)
     {
-        return $this->app['config']["attachments.disks.{$name}"];
+        return $this->app['config']["taxusorg.attachments.disks.{$name}"];
     }
     
 
@@ -119,7 +119,7 @@ class AttachmentManager
      */
     public function getDefaultDisk()
     {
-        return $this->app['config']['attachments.default'];
+        return $this->app['config']['taxusorg.attachments.default'];
     }
     
     /**

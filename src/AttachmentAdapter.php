@@ -25,8 +25,14 @@ class AttachmentAdapter implements FilesystemContract
     public function explainPath($path)
     {
         $pathinfo = Util::pathinfo($path);
-        $pathinfo['dirname'] = substr($pathinfo['dirname'], 0, 1) == '/' ? substr($pathinfo['dirname'], 1) : $pathinfo['dirname'];
+        $pathinfo['dirname'] = $this->normalizeDirname($pathinfo['dirname']);
         return $pathinfo;
+    }
+    
+    public function normalizeDirname($dir)
+    {
+        if ($dir == '/') return '';
+        return substr($dir, 0, 1) == '/' ? substr($dir, 1) : $dir;
     }
     
     /**
@@ -438,7 +444,12 @@ class AttachmentAdapter implements FilesystemContract
     public function deleteDirectory($directory)
     {
         $this->disk->deleteDirectory($directory);
-        return $this->deletePathsByDirs($directory);
+        return $this->deletePathsByDirs($this->normalizeDirname($directory));
+    }
+    
+    public function url($path)
+    {
+        return $this->disk->url($this->getFilepath($path));
     }
     
     public function applyPathPrefix($path)
